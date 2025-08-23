@@ -44,10 +44,11 @@ while True:
                 print(i, it, "- No inventory data")
     
     elif choice == "3":
-        break  # exit loop if user selects 3
+        break  
 
 print("\n📊 Fruit Inventory:")
 print("{:<10} {:>10} {:>10}".format("Name", "Price", "Quantity"))
 print("-" * 32)
 for name, details in items_inventory.items():
     print("{:<10} {:>10} {:>10}".format(name, details["price"], details["quantity"]))
+ 
