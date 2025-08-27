@@ -16,7 +16,14 @@ import pandas as pd
 # plt.title("Normal Bar Chart (Seaborn)")
 # plt.show()
 
+# df=sns.load_dataset('tips')
+# sns.boxplot(x="day",y="total_bill",data=df,palette="pastel")
+# plt.title("box plot")
+# plt.show()
+
 df=sns.load_dataset('tips')
-sns.boxplot(x="day",y="total_bill",data=df,palette="pastel")
-plt.title("box plot")
+sns.scatterplot(x="total_bill",y="tip",data=df,hue="sex",style="time")
+plt.title("Scatter plot")
 plt.show()
+
+
