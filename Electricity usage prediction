@@ -1,54 +1,66 @@
-import os
-from datetime import datetime, timedelta
-import numpy as np
+# electricity_regression_fixed.py
+
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-import joblib
+from sklearn.metrics import mean_absolute_error, r2_score
 
-def generate_synthetic_data(n_days=365):
-    start = datetime(2020, 1, 1)
-    periods = n_days * 24
-    timestamps = [start + timedelta(hours=i) for i in range(periods)]
-    df = pd.DataFrame({'timestamp': timestamps})
-    df['hour'] = df['timestamp'].dt.hour
-    df['temperature'] = 20 + 10*np.sin(2*np.pi*(df['hour']/24)) + np.random.normal(0, 1, periods)
-    df['humidity'] = 60 + 20*np.cos(2*np.pi*(df['hour']/24)) + np.random.normal(0, 3, periods)
-    df['consumption'] = (
-        0.5*df['hour'].apply(lambda h: 1 if 6 <= h <= 9 or 18 <= h <= 22 else 0.6)
-        + 0.03*(30 - df['temperature'])
-        + 0.002*df['humidity']
-        + np.random.normal(0, 0.2, periods)
-    )
-    df['consumption'] = (df['consumption'] * 2.5).clip(lower=0.1)
-    return df
+# Load dataset
+data = pd.read_csv("electricity_cost_dataset.csv")
 
-def prepare_features(df):
-    X = df[['hour','temperature','humidity']]
-    y = df['consumption']
-    return X, y
+# Features (independent variables) and target (electricity cost)
+X = data.drop(columns=["electricity cost"])   # all columns except target
+y = data["electricity cost"]
 
-def train_and_evaluate(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-    preds = model.predict(X_test)
-    mae = mean_absolute_error(y_test, preds)
-    rmse = mean_squared_error(y_test, preds, squared=False)
-    r2 = r2_score(y_test, preds)
-    print(f"MAE: {mae:.4f}")
-    print(f"RMSE: {rmse:.4f}")
-    print(f"R2: {r2:.4f}")
-    return model
+# Handle categorical columns (convert 'structure type' to numbers)
+X = pd.get_dummies(X, drop_first=True)
 
-def save_model(model, path='models/model.joblib'):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    joblib.dump(model, path)
-    print('Saved model to', path)
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
-if __name__ == '__main__':
-    df = generate_synthetic_data(n_days=365)
-    X, y = prepare_features(df)
-    model = train_and_evaluate(X, y)
-    save_model(model)
+# Train model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Predict
+y_pred = model.predict(X_test)
+
+# Evaluation
+print("Intercept:", model.intercept_)
+print("Coefficients:")
+for col, coef in zip(X.columns, model.coef_):
+    print(f"  {col}: {coef:.4f}")
+
+print("\nMean Absolute Error:", mean_absolute_error(y_test, y_pred))
+print("R² Score:", r2_score(y_test, y_pred))
+
+# ---- FIXED: Create sample with correct feature columns ----
+sample = pd.DataFrame(columns=X.columns)
+sample.loc[0] = 0  # initialize with zeros
+
+sample["site area"] = 2000
+sample["water consumption"] = 3000
+sample["recycling rate"] = 40
+sample["utilisation rate"] = 70
+sample["air qality index"] = 150
+sample["issue reolution time"] = 10
+sample["resident count"] = 100
+
+# If Residential is in dummy columns, set it to 1
+if "structure type_Residential" in sample.columns:
+    sample["structure type_Residential"] = 1
+
+# Predict custom input
+predicted_cost = model.predict(sample)
+print("\nPredicted Electricity Cost for sample input:", predicted_cost[0])
+
+# Visualization: Actual vs Predicted
+plt.scatter(y_test, y_pred, color="blue")
+plt.xlabel("Actual Electricity Cost")
+plt.ylabel("Predicted Electricity Cost")
+plt.title("Actual vs Predicted Electricity Cost")
+plt.plot([y.min(), y.max()], [y.min(), y.max()], "r--")  # reference line
+plt.show()
